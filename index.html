@@ -1,0 +1,2191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sweet Crush Saga - Juego Match-3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos personalizados para la estética dulce, brillante y animaciones de juego */
+        :root {
+            --bg-gradient-1: #ff758c;
+            --bg-gradient-2: #ff7eb3;
+            --bg-gradient-3: #a18cd1;
+            --board-bg: rgba(45, 22, 68, 0.72);
+            --cell-light: rgba(255, 255, 255, 0.14);
+            --cell-dark: rgba(255, 255, 255, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: linear-gradient(135deg, #ff6b9d 0%, #c86dd7 50%, #5b86e5 100%);
+            background-size: 200% 200%;
+            animation: gradientFlow 15s ease infinite;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Decoración de fondo flotante */
+        .bg-bubble {
+            position: fixed;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.05));
+            pointer-events: none;
+            z-index: 0;
+            animation: floatBubble linear infinite;
+        }
+
+        @keyframes floatBubble {
+            0% { transform: translateY(105vh) scale(0.8); opacity: 0; }
+            20% { opacity: 0.6; }
+            80% { opacity: 0.6; }
+            100% { transform: translateY(-15vh) scale(1.1); opacity: 0; }
+        }
+
+        /* Paneles estilo caramelo brillante */
+        .candy-panel {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.12) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 3px solid rgba(255, 255, 255, 0.55);
+            box-shadow: 0 10px 25px rgba(42, 12, 78, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+            border-radius: 24px;
+        }
+
+        .candy-btn {
+            background: linear-gradient(180deg, #ff5e9c 0%, #e0246e 100%);
+            border: 2px solid #ffb8d4;
+            box-shadow: 0 5px 0 #9e1148, 0 8px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease;
+            cursor: pointer;
+        }
+
+        .candy-btn:hover {
+            transform: translateY(-2px) scale(1.03);
+            filter: brightness(1.08);
+        }
+
+        .candy-btn:active {
+            transform: translateY(3px) scale(0.97);
+            box-shadow: 0 2px 0 #9e1148, 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .candy-btn-blue {
+            background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+            border: 2px solid #bae6fd;
+            box-shadow: 0 5px 0 #075985, 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .candy-btn-blue:active {
+            box-shadow: 0 2px 0 #075985, 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .candy-btn-green {
+            background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+            border: 2px solid #bbf7d0;
+            box-shadow: 0 5px 0 #14532d, 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .candy-btn-green:active {
+            box-shadow: 0 2px 0 #14532d, 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Contenedor principal del tablero */
+        #board-wrapper {
+            position: relative;
+            width: min(92vw, 460px);
+            height: min(92vw, 460px);
+            background: var(--board-bg);
+            border: 5px solid rgba(255, 255, 255, 0.65);
+            border-radius: 22px;
+            box-shadow: 0 18px 40px rgba(28, 8, 54, 0.55), inset 0 0 20px rgba(0, 0, 0, 0.45);
+            padding: 8px;
+            touch-action: none;
+        }
+
+        #grid-cells {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 100%;
+            height: 100%;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .grid-cell {
+            width: 100%;
+            height: 100%;
+            transition: background-color 0.2s ease;
+        }
+
+        .grid-cell:nth-child(even) {
+            background-color: var(--cell-light);
+        }
+
+        .grid-cell:nth-child(odd) {
+            background-color: var(--cell-dark);
+        }
+
+        /* Capa de caramelos animados posicionados absolutamente */
+        #candy-layer {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            pointer-events: none;
+        }
+
+        .candy-piece {
+            position: absolute;
+            width: 12.5%;
+            height: 12.5%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            cursor: grab;
+            transition: transform 0.26s cubic-bezier(0.25, 1.25, 0.5, 1);
+            will-change: transform;
+            z-index: 5;
+        }
+
+        .candy-piece:active {
+            cursor: grabbing;
+        }
+
+        .candy-visual {
+            position: relative;
+            width: 80%;
+            height: 80%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .candy-visual img,
+        .candy-visual svg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.38));
+            transition: transform 0.18s ease, filter 0.18s ease;
+        }
+
+        /* Estado seleccionado con brillo pulsante */
+        .candy-selected {
+            z-index: 15 !important;
+        }
+
+        .candy-selected .candy-visual {
+            animation: pulseSelect 0.7s infinite alternate ease-in-out;
+            filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 18px #ffeb3b);
+        }
+
+        @keyframes pulseSelect {
+            0% { transform: scale(1.08) rotate(-4deg); }
+            100% { transform: scale(1.22) rotate(4deg); }
+        }
+
+        /* Pista automática */
+        .candy-hint .candy-visual {
+            animation: hintWiggle 0.9s infinite ease-in-out;
+            filter: drop-shadow(0 0 12px #ffffff) drop-shadow(0 0 20px #38bdf8);
+        }
+
+        @keyframes hintWiggle {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.16) rotate(-8deg); }
+            50% { transform: scale(1.05) rotate(0deg); }
+            75% { transform: scale(1.16) rotate(8deg); }
+        }
+
+        /* Animación de destrucción / explosión */
+        .candy-pop {
+            animation: popOut 0.28s cubic-bezier(0.17, 0.89, 0.32, 1.49) forwards;
+            z-index: 20 !important;
+        }
+
+        @keyframes popOut {
+            0% { transform: scale(1); opacity: 1; }
+            45% { transform: scale(1.38); opacity: 0.95; filter: brightness(1.8); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        /* Animación de aparición de caramelo especial */
+        .candy-spawn {
+            animation: spawnBounce 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes spawnBounce {
+            0% { transform: scale(0.1); }
+            60% { transform: scale(1.25); }
+            100% { transform: scale(1); }
+        }
+
+        /* Capa de efectos visuales (partículas, rayos, textos flotantes) */
+        #fx-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: visible;
+            z-index: 30;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleFly 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes particleFly {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+
+        .beam-fx {
+            position: absolute;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 50%, rgba(255,255,255,0) 100%);
+            box-shadow: 0 0 18px #fff, 0 0 30px #ffeb3b;
+            border-radius: 999px;
+            pointer-events: none;
+            animation: beamFade 0.42s ease-out forwards;
+        }
+
+        @keyframes beamFade {
+            0% { opacity: 1; transform: scale(0.95); }
+            100% { opacity: 0; transform: scale(1.08); }
+        }
+
+        .floating-score {
+            position: absolute;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 0 #9d174d, 0 4px 10px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            white-space: nowrap;
+            animation: floatUpScore 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes floatUpScore {
+            0% { transform: translate(-50%, 0) scale(0.6); opacity: 0; }
+            25% { transform: translate(-50%, -12px) scale(1.15); opacity: 1; }
+            100% { transform: translate(-50%, -48px) scale(1); opacity: 0; }
+        }
+
+        /* Cartel festivo de combos ("¡Delicioso!", "¡Divino!") */
+        #combo-banner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: clamp(2rem, 8vw, 3.2rem);
+            font-weight: 700;
+            text-align: center;
+            background: linear-gradient(180deg, #fff7ad 0%, #ffa9f9 50%, #ff5e9c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 4px 0 #701a75) drop-shadow(0 8px 18px rgba(0,0,0,0.6));
+            pointer-events: none;
+            z-index: 40;
+            white-space: nowrap;
+        }
+
+        .banner-animate {
+            animation: bannerPop 1.15s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes bannerPop {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
+            25% { transform: translate(-50%, -50%) scale(1.18) rotate(3deg); opacity: 1; }
+            75% { transform: translate(-50%, -50%) scale(1) rotate(-2deg); opacity: 1; }
+            100% { transform: translate(-50%, -70%) scale(0.8); opacity: 0; }
+        }
+
+        /* Barra de progreso con brillo */
+        .progress-bar-fill {
+            background: linear-gradient(90deg, #facc15 0%, #fb923c 50%, #f43f5e 100%);
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.7);
+            transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Coraza de cristal/hielo para Niveles Jefe (cada 10 niveles) */
+        .candy-armor {
+            position: absolute;
+            inset: 4%;
+            border-radius: 22%;
+            pointer-events: none;
+            z-index: 12;
+            transition: transform 0.25s ease, opacity 0.25s ease;
+        }
+
+        .candy-armor-2 {
+            background: linear-gradient(135deg, rgba(186, 230, 253, 0.62) 0%, rgba(56, 189, 248, 0.38) 50%, rgba(14, 116, 144, 0.58) 100%);
+            border: 3px solid #e0f2fe;
+            box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.85), 0 3px 8px rgba(2, 132, 199, 0.5);
+        }
+
+        .candy-armor-1 {
+            background: linear-gradient(135deg, rgba(224, 242, 254, 0.35) 0%, rgba(125, 211, 252, 0.18) 100%);
+            border: 2.5px dashed #bae6fd;
+            box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.6);
+        }
+
+        /* Tema visual especial para Niveles Jefe */
+        body.boss-theme {
+            background: linear-gradient(135deg, #3b0764 0%, #831843 50%, #1e1b4b 100%);
+            background-size: 200% 200%;
+        }
+
+        .boss-board-glow {
+            border-color: #facc15 !important;
+            box-shadow: 0 0 35px rgba(250, 204, 21, 0.45), 0 18px 40px rgba(15, 5, 30, 0.75) !important;
+        }
+
+        /* Modales */
+        .modal-backdrop {
+            background: rgba(24, 9, 44, 0.78);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="p-2 sm:p-4">
+
+    <!-- Burbujas decorativas de fondo -->
+    <div id="bg-bubbles-container"></div>
+
+    <!-- Contenedor Principal del Juego -->
+    <main class="relative z-10 w-full max-w-lg flex flex-col items-center gap-3 sm:gap-4">
+        
+        <!-- Encabezado y Controles Superiores -->
+        <header class="w-full flex items-center justify-between px-1">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-600 border-2 border-white shadow-lg flex items-center justify-center text-xl">
+                    🍬
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-wide drop-shadow-md leading-none">
+                        Sweet Crush
+                    </h1>
+                    <span id="level-subtitle" class="text-xs sm:text-sm text-pink-100 font-medium">
+                        Nivel 1 • Reino de Caramelo
+                    </span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Selector rápido de nivel -->
+                <button id="btn-levels" title="Seleccionar Nivel" class="candy-btn candy-btn-blue px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1">
+                    <span>🗺️</span>
+                    <span class="hidden sm:inline">Niveles</span>
+                </button>
+                <!-- Botón Pista -->
+                <button id="btn-hint" title="Mostrar Pista" class="candy-btn candy-btn-green px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1">
+                    <span>💡</span>
+                </button>
+                <!-- Botón Reiniciar -->
+                <button id="btn-restart" title="Reiniciar Nivel" class="candy-btn px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1">
+                    <span>🔄</span>
+                </button>
+                <!-- Botón Audio -->
+                <button id="btn-sound" title="Activar/Silenciar Sonido" class="candy-btn candy-btn-blue w-10 h-10 rounded-xl text-base font-bold flex items-center justify-center">
+                    🔊
+                </button>
+            </div>
+        </header>
+
+        <!-- Panel de Estadísticas: Nivel, Puntaje, Objetivo, Movimientos -->
+        <section class="candy-panel w-full p-3 sm:p-4 flex flex-col gap-2.5">
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <!-- Nivel -->
+                <div class="bg-purple-950/40 rounded-2xl py-1.5 px-2 border border-white/20">
+                    <div class="text-[11px] sm:text-xs uppercase tracking-wider text-pink-200 font-semibold">Nivel</div>
+                    <div id="ui-level" class="text-xl sm:text-2xl font-bold text-white drop-shadow">1</div>
+                </div>
+
+                <!-- Movimientos -->
+                <div class="bg-purple-950/40 rounded-2xl py-1.5 px-2 border border-white/20">
+                    <div class="text-[11px] sm:text-xs uppercase tracking-wider text-pink-200 font-semibold">Movimientos</div>
+                    <div id="ui-moves" class="text-xl sm:text-2xl font-bold text-yellow-300 drop-shadow">20</div>
+                </div>
+
+                <!-- Puntaje -->
+                <div class="bg-purple-950/40 rounded-2xl py-1.5 px-2 border border-white/20">
+                    <div class="text-[11px] sm:text-xs uppercase tracking-wider text-pink-200 font-semibold">Puntaje</div>
+                    <div id="ui-score" class="text-xl sm:text-2xl font-bold text-emerald-300 drop-shadow">0</div>
+                </div>
+            </div>
+
+            <!-- Barra de progreso hacia el Objetivo -->
+            <div class="flex flex-col gap-1">
+                <div class="flex justify-between items-center text-xs sm:text-sm font-semibold px-1">
+                    <span id="ui-objective-label" class="text-pink-100">Objetivo del Nivel:</span>
+                    <span id="ui-target" class="text-yellow-200 font-bold">2,200 pts</span>
+                </div>
+                <div class="w-full h-4 bg-purple-950/60 rounded-full p-0.5 border border-white/30 overflow-hidden relative">
+                    <div id="ui-progress" class="progress-bar-fill h-full rounded-full" style="width: 0%;"></div>
+                    <!-- Estrellas hitos -->
+                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] drop-shadow">⭐</span>
+                </div>
+                <!-- Indicador extra exclusivo para Niveles Jefe (cada 10 niveles) -->
+                <div id="boss-status-bar" class="hidden mt-1 bg-amber-500/25 border border-amber-300/60 rounded-xl px-2.5 py-1 flex items-center justify-between text-xs font-bold text-amber-200">
+                    <span>👑 JEFE: Rompe todas las corazas</span>
+                    <span id="ui-armor-count" class="bg-amber-400 text-purple-950 px-2 py-0.5 rounded-lg">0 restantes</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tablero de Juego 8x8 -->
+        <section id="board-wrapper" aria-label="Tablero de juego Candy Crush">
+            <!-- Cuadrícula base -->
+            <div id="grid-cells"></div>
+            <!-- Capa de fichas/caramelos -->
+            <div id="candy-layer"></div>
+            <!-- Capa de efectos visuales y partículas -->
+            <div id="fx-layer"></div>
+            <!-- Banner festivo de combos -->
+            <div id="combo-banner">¡Delicioso!</div>
+        </section>
+
+        <!-- Pie de ayuda breve -->
+        <footer class="text-center text-xs sm:text-sm text-white/90 font-medium drop-shadow px-2">
+            Desliza o toca dos caramelos adyacentes para combinar 3 o más • <span class="text-yellow-200 font-bold">4 = Rayado</span> • <span class="text-pink-200 font-bold">L/T = Envuelto</span> • <span class="text-cyan-200 font-bold">5 = Bomba</span>
+        </footer>
+    </main>
+
+    <!-- Modal de Victoria / Derrota -->
+    <div id="game-modal" class="fixed inset-0 z-50 modal-backdrop hidden items-center justify-center p-4">
+        <div class="candy-panel max-w-sm w-full p-6 text-center flex flex-col items-center gap-4 transform transition-all scale-100">
+            <div id="modal-icon" class="text-6xl drop-shadow-lg animate-bounce">🏆</div>
+            <h2 id="modal-title" class="text-3xl font-bold text-white drop-shadow">¡Nivel Completado!</h2>
+            <p id="modal-message" class="text-pink-100 text-sm sm:text-base">
+                ¡Increíble jugada! Has alcanzado la puntuación objetivo.
+            </p>
+            
+            <div class="w-full bg-purple-950/50 rounded-2xl p-3 border border-white/25 flex justify-around">
+                <div>
+                    <div class="text-xs text-pink-200">Puntaje Final</div>
+                    <div id="modal-score" class="text-xl font-bold text-yellow-300">2,450</div>
+                </div>
+                <div class="w-px bg-white/20"></div>
+                <div>
+                    <div class="text-xs text-pink-200">Estrellas</div>
+                    <div id="modal-stars" class="text-xl">⭐⭐⭐</div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 w-full mt-1">
+                <button id="modal-btn-retry" class="candy-btn flex-1 py-3 rounded-2xl font-bold text-base">
+                    🔄 Reintentar
+                </button>
+                <button id="modal-btn-next" class="candy-btn candy-btn-green flex-1 py-3 rounded-2xl font-bold text-base">
+                    Siguiente ➡️
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Selector de Niveles -->
+    <div id="levels-modal" class="fixed inset-0 z-50 modal-backdrop hidden items-center justify-center p-4">
+        <div class="candy-panel max-w-md w-full p-6 text-center flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-white drop-shadow">🗺️ Mapa de Niveles</h2>
+                <button id="close-levels-modal" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 font-bold text-lg flex items-center justify-center">✕</button>
+            </div>
+            <p class="text-xs sm:text-sm text-pink-100 text-left">
+                Elige un nivel para jugar. Supera niveles para desbloquear nuevos desafíos dulces.
+            </p>
+            <div id="levels-grid" class="grid grid-cols-1 gap-2.5 max-h-72 overflow-y-auto pr-1">
+                <!-- Generado dinámicamente por JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * SWEET CRUSH SAGA - MOTOR DE JUEGO MATCH-3 COMPLETO EN UN SOLO ARCHIVO
+         * ============================================================================
+         * Arquitectura:
+         * 1. SoundEngine: Sintetizador Web Audio API (sin archivos externos).
+         * 2. CandyGraphics: Generador de gráficos SVG vectoriales de alta calidad para
+         *    5 colores + variantes especiales (Rayado H/V, Envuelto, Bomba de Color).
+         * 3. LevelConfig: 6 niveles progresivos con objetivos y movimientos.
+         * 4. Match3Engine: Lógica de tablero 8x8, detección de patrones (3, 4, 5, L/T),
+         *    activación de poderes especiales, gravedad, cascadas y sugerencias.
+         * 5. InputController: Soporte fluido para clic-clic y deslizar (touch/mouse).
+         */
+
+        // ============================================================================
+        // 1. MOTOR DE AUDIO SINTETIZADO (WEB AUDIO API - SIN ARCHIVOS EXTERNOS)
+        // ============================================================================
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            playTone(freq, type = 'sine', duration = 0.15, volume = 0.18, delay = 0) {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                try {
+                    const now = this.ctx.currentTime + delay;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    gain.gain.setValueAtTime(volume, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + duration);
+                } catch (e) {
+                    // Ignorar errores de audio en navegadores restrictivos
+                }
+            }
+
+            playSelect() {
+                this.playTone(520, 'sine', 0.08, 0.14);
+            }
+
+            playSwap() {
+                this.playTone(340, 'triangle', 0.12, 0.15);
+                this.playTone(460, 'triangle', 0.12, 0.15, 0.05);
+            }
+
+            playInvalid() {
+                this.playTone(220, 'sawtooth', 0.14, 0.12);
+                this.playTone(175, 'sawtooth', 0.18, 0.12, 0.08);
+            }
+
+            playMatch(combo = 1) {
+                const base = 440 * Math.pow(1.08, Math.min(combo - 1, 8));
+                this.playTone(base, 'sine', 0.18, 0.2, 0);
+                this.playTone(base * 1.25, 'triangle', 0.2, 0.18, 0.06);
+                this.playTone(base * 1.5, 'sine', 0.25, 0.2, 0.12);
+            }
+
+            playSpecialCreate() {
+                [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+                    this.playTone(f, 'triangle', 0.22, 0.2, i * 0.05);
+                });
+            }
+
+            playSpecialActivate() {
+                this.playTone(880, 'sawtooth', 0.25, 0.16);
+                this.playTone(220, 'sine', 0.35, 0.24, 0.04);
+            }
+
+            playWin() {
+                const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+                notes.forEach((n, idx) => {
+                    this.playTone(n, 'triangle', 0.28, 0.22, idx * 0.09);
+                });
+            }
+
+            playLose() {
+                const notes = [440, 392, 349.23, 293.66];
+                notes.forEach((n, idx) => {
+                    this.playTone(n, 'sine', 0.3, 0.18, idx * 0.12);
+                });
+            }
+        }
+
+        // ============================================================================
+        // 2. GRÁFICOS DE CARAMELOS (5 DISEÑOS PERSONALIZADOS PNG + SVG VECTORIAL)
+        // ============================================================================
+        const CANDY_COLORS = ['blue', 'choco', 'red', 'sandia', 'yellow'];
+
+        const CANDY_ASSETS = {
+            blue:   { file: 'CandyBlue.png',     main: '#6c8cff', light: '#b8c8ff', dark: '#3f5be0', hex: '#6c8cff' },
+            choco:  { file: 'CandyChoco.png',    main: '#9e5c4c', light: '#e0a96d', dark: '#5e322e', hex: '#c87d55' },
+            red:    { file: 'CandyRed.png',      main: '#e83363', light: '#ff85a2', dark: '#9e143b', hex: '#e83363' },
+            sandia: { file: 'CandySandia.png',   main: '#4ea832', light: '#ff5277', dark: '#2d6e19', hex: '#52b736' },
+            yellow: { file: 'CandyYellow.png',   main: '#f7a842', light: '#ffe0a3', dark: '#c97218', hex: '#f7a842' },
+            bomb:   { file: 'CandyEspecial.png', main: '#394659', light: '#90a4ae', dark: '#1c2430', hex: '#38bdf8' }
+        };
+
+        /**
+         * Genera el vector SVG de respaldo idéntico a cada uno de los 5 iconos PNG
+         * proporcionados (CandyBlue, CandyChoco, CandyRed, CandySandia, CandyYellow).
+         */
+        function getCustomCandyFallbackSVG(color) {
+            switch (color) {
+                case 'blue': // CandyBlue: Pastilla azul/bígaro 3D con centro hundido ovalado y destello
+                    return `
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="52" cy="54" rx="41" ry="39" fill="#435ce6"/>
+                        <ellipse cx="47" cy="48" rx="40" ry="38" fill="#7c98ff"/>
+                        <ellipse cx="47" cy="48" rx="26" ry="24" fill="#9fb4ff"/>
+                        <ellipse cx="47" cy="48" rx="21" ry="19" fill="#4a65e8"/>
+                        <ellipse cx="49" cy="51" rx="18" ry="16" fill="#627ef7"/>
+                        <ellipse cx="69" cy="24" rx="9" ry="3.8" transform="rotate(38 69 24)" fill="rgba(255,255,255,0.85)"/>
+                        <circle cx="59" cy="16" r="2.8" fill="rgba(255,255,255,0.85)"/>
+                        <polygon points="29,60 30.5,65.5 36,67 30.5,68.5 29,74 27.5,68.5 22,67 27.5,65.5" fill="#ffffff"/>
+                    </svg>`;
+
+                case 'choco': // CandyChoco: Bombón cilíndrico de chocolate y caramelo con gota central
+                    return `
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 45 C10 74, 24 90, 50 90 C78 90, 92 72, 90 44 C88 20, 70 10, 48 11 C25 12, 13 24, 12 45 Z" fill="#8f4c45"/>
+                        <path d="M12 48 C10 74, 24 90, 48 90 C30 85, 19 72, 18 52 Z" fill="#6b3435"/>
+                        <ellipse cx="48" cy="36" rx="37" ry="26" transform="rotate(-10 48 36)" fill="#d99f59"/>
+                        <ellipse cx="49" cy="36" rx="23" ry="16" transform="rotate(-10 49 36)" fill="#ad6b4b"/>
+                        <ellipse cx="49" cy="37" rx="16" ry="11" transform="rotate(-10 49 37)" fill="#96563c"/>
+                        <ellipse cx="49" cy="37" rx="11.5" ry="7.2" fill="#9e5a44" stroke="#42211d" stroke-width="2"/>
+                        <ellipse cx="52" cy="35" rx="5.5" ry="2.8" transform="rotate(12 52 35)" fill="rgba(255,255,255,0.55)"/>
+                        <ellipse cx="27" cy="25" rx="9" ry="3.2" transform="rotate(-38 27 25)" fill="rgba(255,255,255,0.75)"/>
+                        <circle cx="36" cy="18" r="2.3" fill="rgba(255,255,255,0.75)"/>
+                        <polygon points="71,60 72.5,66 78.5,67.5 72.5,69 71,75 69.5,69 63.5,67.5 69.5,66" fill="#ffffff"/>
+                    </svg>`;
+
+                case 'red': // CandyRed: Caramelo espiral rosa intenso/carmesí y blanco con punta superior
+                    return `
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 26 C18 17, 17 13, 25 11 C31 10, 35 14, 41 14 C68 12, 91 27, 91 53 C91 77, 73 91, 49 91 C25 91, 9 76, 9 52 C9 39, 15 31, 20 26 Z" fill="#e0285a"/>
+                        <path d="M10 58 C12 79, 28 91, 49 91 C72 91, 89 77, 91 56 C85 73, 68 82, 48 82 C27 82, 14 72, 10 58 Z" fill="#bd1947"/>
+                        <ellipse cx="49" cy="42" rx="35" ry="25" fill="#f2f4ff"/>
+                        <path d="M22 25 C25 16, 26 11, 31 11 L38 14 C30 22, 24 31, 24 41 C24 55, 36 63, 51 63 C66 63, 76 54, 76 42 C76 30, 64 22, 49 22 C36 22, 28 29, 28 39 C28 48, 36 53, 47 53 C56 53, 62 48, 62 42 C62 37, 56 34, 49 34 C44 34, 41 37, 41 40" fill="none" stroke="#e0285a" stroke-width="6.5" stroke-linecap="round"/>
+                        <ellipse cx="83" cy="68" rx="3.5" ry="10" transform="rotate(24 83 68)" fill="rgba(255,255,255,0.65)"/>
+                        <circle cx="87" cy="56" r="2.4" fill="rgba(255,255,255,0.65)"/>
+                        <polygon points="32,68 33.5,73.5 39,75 33.5,76.5 32,82 30.5,76.5 25,75 30.5,73.5" fill="#ffffff"/>
+                    </svg>`;
+
+                case 'sandia': // CandySandia: Rodaja de sandía dulce con corteza verde rayada y 8 gajos rosas
+                    return `
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="52" cy="50" rx="40" ry="40" fill="#46962b"/>
+                        <path d="M52 10 A40 40 0 0 1 52 90 L44 90 A40 40 0 0 0 44 10 Z" fill="#367a1f"/>
+                        <ellipse cx="44" cy="50" rx="35" ry="38" fill="#63b842"/>
+                        <ellipse cx="44" cy="50" rx="31" ry="34" fill="#edf0fa"/>
+                        <!-- Gajos rosados de sandía con semillas blancas -->
+                        <path d="M42 46 L23 26 A27 29 0 0 1 42 18 Z" fill="#f03e65"/>
+                        <path d="M46 46 L46 18 A27 29 0 0 1 63 27 Z" fill="#f03e65"/>
+                        <path d="M48 48 L65 30 A27 29 0 0 1 72 47 Z" fill="#f03e65"/>
+                        <path d="M48 52 L72 50 A27 29 0 0 1 66 68 Z" fill="#f03e65"/>
+                        <path d="M46 54 L64 71 A27 29 0 0 1 47 81 Z" fill="#f03e65"/>
+                        <path d="M42 54 L43 81 A27 29 0 0 1 26 73 Z" fill="#f03e65"/>
+                        <path d="M40 52 L24 70 A27 29 0 0 1 17 53 Z" fill="#f03e65"/>
+                        <path d="M40 48 L17 49 A27 29 0 0 1 21 29 Z" fill="#f03e65"/>
+                        <!-- Semillas blancas -->
+                        <ellipse cx="35" cy="32" rx="1.6" ry="2.8" transform="rotate(-25 35 32)" fill="#ffffff"/>
+                        <ellipse cx="50" cy="31" rx="1.6" ry="2.8" transform="rotate(20 50 31)" fill="#ffffff"/>
+                        <ellipse cx="62" cy="40" rx="2.6" ry="1.6" transform="rotate(-15 62 40)" fill="#ffffff"/>
+                        <ellipse cx="63" cy="57" rx="2.6" ry="1.6" transform="rotate(25 63 57)" fill="#ffffff"/>
+                        <ellipse cx="54" cy="70" rx="1.6" ry="2.8" transform="rotate(-20 54 70)" fill="#ffffff"/>
+                        <ellipse cx="38" cy="71" rx="1.6" ry="2.8" transform="rotate(25 38 71)" fill="#ffffff"/>
+                        <ellipse cx="27" cy="60" rx="2.6" ry="1.6" transform="rotate(-20 27 60)" fill="#ffffff"/>
+                        <ellipse cx="26" cy="42" rx="2.6" ry="1.6" transform="rotate(15 26 42)" fill="#ffffff"/>
+                        <ellipse cx="84" cy="38" rx="3.4" ry="10" transform="rotate(-16 84 38)" fill="rgba(255,255,255,0.55)"/>
+                        <polygon points="66,60 67.3,64.5 72,65.8 67.3,67.1 66,71.6 64.7,67.1 60,65.8 64.7,64.5" fill="#ffffff"/>
+                    </svg>`;
+
+                case 'yellow': // CandyYellow: Caramelo ovalado rayado naranja dorado y blanco lavanda
+                default:
+                    return `
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <clipPath id="yellowOvalClip">
+                                <ellipse cx="50" cy="50" rx="43" ry="34" transform="rotate(-24 50 50)"/>
+                            </clipPath>
+                        </defs>
+                        <g clip-path="url(#yellowOvalClip)">
+                            <rect x="0" y="0" width="100" height="100" fill="#eef0fc"/>
+                            <path d="M5 35 L25 90 L38 86 L16 25 Z" fill="#f5a642"/>
+                            <path d="M22 18 L48 92 L62 88 L35 12 Z" fill="#f5a642"/>
+                            <path d="M42 10 L70 86 L83 80 L55 8 Z" fill="#f5a642"/>
+                            <path d="M62 8 L88 74 L98 66 L75 6 Z" fill="#f5a642"/>
+                            <ellipse cx="50" cy="50" rx="43" ry="34" transform="rotate(-24 50 50)" fill="none" stroke="rgba(180,110,30,0.2)" stroke-width="6"/>
+                        </g>
+                        <ellipse cx="50" cy="45" rx="26" ry="17" transform="rotate(-24 50 45)" fill="none" stroke="rgba(196,125,44,0.45)" stroke-width="2.2"/>
+                        <ellipse cx="50" cy="44" rx="17" ry="11" transform="rotate(-24 50 44)" fill="none" stroke="rgba(196,125,44,0.45)" stroke-width="2"/>
+                        <ellipse cx="56" cy="36" rx="8" ry="4" transform="rotate(10 56 36)" fill="rgba(255,255,255,0.65)"/>
+                        <ellipse cx="56" cy="18" rx="8" ry="2.8" fill="rgba(255,255,255,0.85)"/>
+                        <circle cx="68" cy="19" r="2.2" fill="rgba(255,255,255,0.85)"/>
+                        <polygon points="45,62 46.5,67.5 52,69 46.5,70.5 45,76 43.5,70.5 38,69 43.5,67.5" fill="#ffffff"/>
+                    </svg>`;
+            }
+        }
+
+        /**
+         * Genera el visual completo del caramelo (80% del tamaño de la celda):
+         * Carga el archivo PNG proporcionado (CandyBlue.png, CandyChoco.png, etc., y CandyEspecial.png)
+         * con respaldo automático al SVG vectorial idéntico si el archivo externo no está presente,
+         * y superpone los efectos de caramelos especiales (rayado, envuelto, bomba) y corazas de Jefe.
+         */
+        function getCandyHTML(color, special = 'normal', armor = 0) {
+            const armorOverlay = armor > 0
+                ? `<div class="candy-armor candy-armor-${armor}" title="Coraza (${armor} golpe${armor > 1 ? 's' : ''})"></div>`
+                : '';
+
+            // Bomba de color (CandyEspecial.png con respaldo SVG idéntico)
+            if (special === 'color-bomb' || color === 'bomb') {
+                const bombFallbackSVG = `
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="43" fill="#3a4759"/>
+                    <ellipse cx="36" cy="36" rx="18" ry="23" transform="rotate(-28 36 36)" fill="#5b697d"/>
+                    <ellipse cx="32" cy="34" rx="10" ry="14" transform="rotate(-28 32 34)" fill="#cfd8e3"/>
+                    <!-- Grajeas multicolor -->
+                    <circle cx="40" cy="14" r="5.5" fill="#e83b5a"/>
+                    <circle cx="57" cy="11" r="3.6" fill="#5cb847"/>
+                    <circle cx="26" cy="21" r="3.2" fill="#3fa3f7"/>
+                    <circle cx="67" cy="21" r="5.8" fill="#46a6f7"/>
+                    <circle cx="81" cy="26" r="4.2" fill="#e83b5a"/>
+                    <circle cx="16" cy="31" r="4.5" fill="#f7c95c"/>
+                    <circle cx="32" cy="31" r="4.8" fill="#e83b5a"/>
+                    <circle cx="51" cy="27" r="6.8" fill="#f7c95c"/>
+                    <circle cx="71" cy="37" r="4.2" fill="#dce2eb"/>
+                    <circle cx="82" cy="44" r="5.2" fill="#5cb847"/>
+                    <circle cx="53" cy="44" r="5.5" fill="#5cb847"/>
+                    <circle cx="35" cy="48" r="3.8" fill="#46a6f7"/>
+                    <circle cx="19" cy="46" r="3.2" fill="#dce2eb"/>
+                    <circle cx="13" cy="50" r="3.2" fill="#46a6f7"/>
+                    <circle cx="18" cy="57" r="2.6" fill="#f7c95c"/>
+                    <circle cx="69" cy="54" r="3.5" fill="#e83b5a"/>
+                    <circle cx="57" cy="58" r="2.4" fill="#dce2eb"/>
+                    <circle cx="44" cy="61" r="4.2" fill="#e83b5a"/>
+                    <circle cx="28" cy="66" r="5.8" fill="#f7c95c"/>
+                    <circle cx="55" cy="68" r="2.6" fill="#f7c95c"/>
+                    <circle cx="67" cy="71" r="4.2" fill="#46a6f7"/>
+                    <circle cx="80" cy="70" r="3.6" fill="#f7c95c"/>
+                    <circle cx="85" cy="65" r="3.5" fill="#46a6f7"/>
+                    <circle cx="50" cy="75" r="2.8" fill="#5cb847"/>
+                    <circle cx="35" cy="79" r="3.6" fill="#46a6f7"/>
+                    <circle cx="20" cy="77" r="2.6" fill="#5cb847"/>
+                    <circle cx="43" cy="87" r="4.8" fill="#cfd8e3"/>
+                    <polygon points="71,72 72.3,77.5 78,79 72.3,80.5 71,86 69.7,80.5 64,79 69.7,77.5" fill="#ffffff"/>
+                </svg>`;
+
+                return `
+                <div class="candy-visual">
+                    <img src="${CANDY_ASSETS.bomb.file}" alt="Caramelo Especial" draggable="false"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                    <div style="display:none; width:100%; height:100%;">${bombFallbackSVG}</div>
+                </div>
+                ${armorOverlay}`;
+            }
+
+            const asset = CANDY_ASSETS[color] || CANDY_ASSETS.blue;
+            const fallbackSVG = getCustomCandyFallbackSVG(color);
+
+            // Superposición visual para caramelos especiales (Rayado H/V o Envuelto)
+            let specialOverlay = '';
+            if (special === 'striped-h') {
+                specialOverlay = `
+                <svg viewBox="0 0 100 100" style="position:absolute;inset:0;pointer-events:none;">
+                    <rect x="8" y="26" width="84" height="7" rx="3.5" fill="#ffffff" fill-opacity="0.88"/>
+                    <rect x="4" y="46.5" width="92" height="7" rx="3.5" fill="#ffffff" fill-opacity="0.92"/>
+                    <rect x="8" y="67" width="84" height="7" rx="3.5" fill="#ffffff" fill-opacity="0.88"/>
+                </svg>`;
+            } else if (special === 'striped-v') {
+                specialOverlay = `
+                <svg viewBox="0 0 100 100" style="position:absolute;inset:0;pointer-events:none;">
+                    <rect x="26" y="8" width="7" height="84" rx="3.5" fill="#ffffff" fill-opacity="0.88"/>
+                    <rect x="46.5" y="4" width="7" height="92" rx="3.5" fill="#ffffff" fill-opacity="0.92"/>
+                    <rect x="67" y="8" width="7" height="84" rx="3.5" fill="#ffffff" fill-opacity="0.88"/>
+                </svg>`;
+            } else if (special === 'wrapped') {
+                specialOverlay = `
+                <svg viewBox="0 0 100 100" style="position:absolute;inset:0;pointer-events:none;">
+                    <rect x="4" y="4" width="92" height="92" rx="22" fill="${asset.light}" fill-opacity="0.28" stroke="#ffffff" stroke-width="4" stroke-dasharray="8 4"/>
+                </svg>`;
+            }
+
+            return `
+            <div class="candy-visual">
+                <img src="${asset.file}" alt="${color}" draggable="false"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div style="display:none; width:100%; height:100%;">${fallbackSVG}</div>
+                ${specialOverlay}
+            </div>
+            ${armorOverlay}`;
+        }
+
+        // ============================================================================
+        // 3. GENERACIÓN DE 100 NIVELES PROGRESIVOS + JEFES CADA 10 NIVELES
+        // ============================================================================
+        const WORLD_NAMES = [
+            'Pradera Dulce',
+            'Bosque de Gomitas',
+            'Río de Chocolate',
+            'Montaña Azúcar',
+            'Valle de Sandía',
+            'Nubes de Algodón',
+            'Cascada de Caramelo',
+            'Templo del Cacao',
+            'Ciudad Glaseada',
+            'Galaxia Suprema'
+        ];
+
+        const BOSS_NAMES = [
+            'Jefe: Guardián de Hielo',
+            'Jefe: Caballero Glaseado',
+            'Jefe: Rey del Chocolate',
+            'Jefe: Titán de Azúcar',
+            'Jefe: Emperador Sandía',
+            'Jefe: Señor de las Nubes',
+            'Jefe: Dragón de Caramelo',
+            'Jefe: Oráculo del Cacao',
+            'Jefe: Duque Cristalino',
+            'Jefe Final: Maestro Dulce'
+        ];
+
+        function build100Levels() {
+            const list = [];
+            for (let i = 1; i <= 100; i++) {
+                const isBoss = i % 10 === 0;
+                const worldIdx = Math.floor((i - 1) / 10);
+
+                // Dificultad calibrada: desafiante pero justa (requiere combos y especiales)
+                const baseTarget = 2200 + (i - 1) * 320 + Math.floor(Math.pow(i, 1.38) * 35);
+                const target = isBoss ? Math.round(baseTarget * 1.12) : baseTarget;
+
+                // Movimientos ajustados: entre 24 (niveles iniciales) y 18 (niveles avanzados), +4 en Jefes
+                const baseMoves = Math.max(18, 24 - Math.floor((i - 1) / 16));
+                const moves = isBoss ? baseMoves + 4 : baseMoves;
+
+                // Usar 5 colores desde el nivel 3 para aumentar el reto estratégico
+                const colors = i <= 2 ? 4 : 5;
+
+                // Cantidad de corazas a romper en niveles Jefe (de 10 hasta 24 corazas)
+                const armorCells = isBoss ? Math.min(24, 8 + (i / 10) * 2) : 0;
+                const armorStrength = i >= 50 ? 2 : 1; // A partir del Jefe 50, las corazas resisten 2 golpes
+
+                list.push({
+                    id: i,
+                    name: isBoss ? BOSS_NAMES[worldIdx] : WORLD_NAMES[worldIdx],
+                    isBoss,
+                    target,
+                    moves,
+                    colors,
+                    armorCells,
+                    armorStrength
+                });
+            }
+            return list;
+        }
+
+        const LEVELS = build100Levels();
+
+        const COMBO_PHRASES = [
+            '¡Dulce!',
+            '¡Sabroso!',
+            '¡Delicioso!',
+            '¡Divino!',
+            '¡Espectacular!',
+            '¡Increíble!'
+        ];
+
+        // ============================================================================
+        // 4. MOTOR PRINCIPAL DEL JUEGO (MATCH-3 ENGINE)
+        // ============================================================================
+        class SweetCrushGame {
+            constructor() {
+                this.rows = 8;
+                this.cols = 8;
+                this.board = []; // Matriz 8x8 de objetos Candy { id, color, special, row, col, el }
+                this.nextCandyId = 1;
+
+                // Estado de partida
+                this.currentLevelIdx = 0;
+                this.unlockedLevels = this.loadProgress();
+                this.score = 0;
+                this.movesLeft = 24;
+                this.targetScore = 2200;
+                this.numColors = 5;
+                this.isBossLevel = false;
+                this.comboCount = 0;
+                this.isBusy = false; // Bloquea entrada mientras ocurren animaciones
+                this.gameOver = false;
+
+                // Selección e interacción
+                this.selectedCandy = null;
+                this.dragStartCandy = null;
+                this.dragStartX = 0;
+                this.dragStartY = 0;
+                this.lastSwapDir = 'h'; // 'h' o 'v' para orientar caramelos rayados
+
+                // Temporizador de pista automática
+                this.hintTimer = null;
+
+                // Sistemas auxiliares
+                this.sound = new SoundEngine();
+
+                // Referencias DOM
+                this.gridCellsEl = document.getElementById('grid-cells');
+                this.candyLayerEl = document.getElementById('candy-layer');
+                this.fxLayerEl = document.getElementById('fx-layer');
+                this.comboBannerEl = document.getElementById('combo-banner');
+
+                this.initBackgroundBubbles();
+                this.initGridCells();
+                this.bindEvents();
+                this.startLevel(0);
+            }
+
+            loadProgress() {
+                try {
+                    const saved = localStorage.getItem('sweet_crush_unlocked');
+                    return saved ? Math.max(1, parseInt(saved, 10)) : 1;
+                } catch (e) {
+                    return 1;
+                }
+            }
+
+            saveProgress(levelNum) {
+                try {
+                    if (levelNum > this.unlockedLevels) {
+                        this.unlockedLevels = levelNum;
+                        localStorage.setItem('sweet_crush_unlocked', String(this.unlockedLevels));
+                    }
+                } catch (e) {
+                    // Ignorar si localStorage está restringido
+                }
+            }
+
+            initBackgroundBubbles() {
+                const container = document.getElementById('bg-bubbles-container');
+                for (let i = 0; i < 14; i++) {
+                    const b = document.createElement('div');
+                    b.className = 'bg-bubble';
+                    const size = 25 + Math.random() * 65;
+                    b.style.width = `${size}px`;
+                    b.style.height = `${size}px`;
+                    b.style.left = `${Math.random() * 100}vw`;
+                    b.style.animationDuration = `${10 + Math.random() * 14}s`;
+                    b.style.animationDelay = `${-Math.random() * 15}s`;
+                    container.appendChild(b);
+                }
+            }
+
+            initGridCells() {
+                this.gridCellsEl.innerHTML = '';
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'grid-cell';
+                        // Alternar patrón ajedrezado
+                        if ((r + c) % 2 === 0) {
+                            cell.style.backgroundColor = 'rgba(255, 255, 255, 0.14)';
+                        } else {
+                            cell.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                        }
+                        this.gridCellsEl.appendChild(cell);
+                    }
+                }
+            }
+
+            // ========================================================================
+            // INICIO Y CONFIGURACIÓN DE NIVEL
+            // ========================================================================
+            startLevel(levelIndex) {
+                this.currentLevelIdx = Math.max(0, Math.min(levelIndex, LEVELS.length - 1));
+                const cfg = LEVELS[this.currentLevelIdx];
+
+                this.score = 0;
+                this.movesLeft = cfg.moves;
+                this.targetScore = cfg.target;
+                this.numColors = cfg.colors;
+                this.isBossLevel = cfg.isBoss;
+                this.comboCount = 0;
+                this.isBusy = false;
+                this.gameOver = false;
+                this.selectedCandy = null;
+
+                // Aplicar estética visual de Jefe si corresponde (cada 10 niveles)
+                const boardWrapper = document.getElementById('board-wrapper');
+                const bossBar = document.getElementById('boss-status-bar');
+                if (this.isBossLevel) {
+                    document.body.classList.add('boss-theme');
+                    boardWrapper.classList.add('boss-board-glow');
+                    bossBar.classList.remove('hidden');
+                } else {
+                    document.body.classList.remove('boss-theme');
+                    boardWrapper.classList.remove('boss-board-glow');
+                    bossBar.classList.add('hidden');
+                }
+
+                this.hideModal();
+                this.generateInitialBoard();
+
+                if (this.isBossLevel) {
+                    this.applyBossArmors(cfg.armorCells, cfg.armorStrength);
+                    this.showComboBanner(0, '👑 ¡NIVEL JEFE!');
+                }
+
+                this.updateUI();
+                this.resetHintTimer();
+            }
+
+            /**
+             * Coloca corazas protectoras sobre caramelos aleatorios en los niveles Jefe.
+             * El jugador debe hacer 3 en línea junto a ellos (o golpearlos con especiales) para romperlas.
+             */
+            applyBossArmors(count, strength) {
+                const coords = [];
+                for (let r = 1; r < this.rows - 1; r++) {
+                    for (let c = 1; c < this.cols - 1; c++) {
+                        coords.push({ r, c });
+                    }
+                }
+                // Mezclar coordenadas
+                for (let i = coords.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [coords[i], coords[j]] = [coords[j], coords[i]];
+                }
+
+                const chosen = coords.slice(0, Math.min(count, coords.length));
+                chosen.forEach(({ r, c }) => {
+                    const candy = this.board[r][c];
+                    if (candy) {
+                        candy.armor = strength;
+                        this.refreshCandyVisual(candy);
+                    }
+                });
+            }
+
+            getRemainingArmors() {
+                let total = 0;
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        if (this.board[r][c] && this.board[r][c].armor > 0) {
+                            total++;
+                        }
+                    }
+                }
+                return total;
+            }
+
+            refreshCandyVisual(candy) {
+                if (!candy || !candy.el) return;
+                candy.el.innerHTML = getCandyHTML(candy.color, candy.special, candy.armor || 0);
+            }
+
+            getRandomColor() {
+                const available = CANDY_COLORS.slice(0, this.numColors);
+                return available[Math.floor(Math.random() * available.length)];
+            }
+
+            generateInitialBoard() {
+                this.candyLayerEl.innerHTML = '';
+                this.board = Array.from({ length: this.rows }, () => Array(this.cols).fill(null));
+
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        let color;
+                        // Evitar generar combinaciones de 3 ya hechas al iniciar
+                        do {
+                            color = this.getRandomColor();
+                        } while (
+                            (c >= 2 && this.board[r][c - 1]?.color === color && this.board[r][c - 2]?.color === color) ||
+                            (r >= 2 && this.board[r - 1][c]?.color === color && this.board[r - 2][c]?.color === color)
+                        );
+
+                        const candy = this.createCandyObject(r, c, color, 'normal', true);
+                        this.board[r][c] = candy;
+                    }
+                }
+
+                // Verificar que exista al menos un movimiento posible
+                if (!this.findValidMove()) {
+                    this.generateInitialBoard();
+                }
+            }
+
+            createCandyObject(row, col, color, special = 'normal', animateDrop = false) {
+                const el = document.createElement('div');
+                el.className = 'candy-piece';
+                el.innerHTML = getCandyHTML(color, special, 0);
+
+                const candy = {
+                    id: this.nextCandyId++,
+                    color,
+                    special,
+                    armor: 0,
+                    row,
+                    col,
+                    el
+                };
+
+                // Posicionamiento inicial
+                if (animateDrop) {
+                    el.style.transform = `translate(${col * 100}%, ${(row - this.rows) * 100}%)`;
+                    this.candyLayerEl.appendChild(el);
+                    // Forzar reflow para animar caída suave
+                    void el.offsetWidth;
+                    requestAnimationFrame(() => {
+                        el.style.transform = `translate(${col * 100}%, ${row * 100}%)`;
+                    });
+                } else {
+                    el.style.transform = `translate(${col * 100}%, ${row * 100}%)`;
+                    this.candyLayerEl.appendChild(el);
+                }
+
+                this.attachCandyInput(candy);
+                return candy;
+            }
+
+            updateCandyPosition(candy) {
+                if (!candy || !candy.el) return;
+                candy.el.style.transform = `translate(${candy.col * 100}%, ${candy.row * 100}%)`;
+            }
+
+            upgradeCandySpecial(candy, newSpecial) {
+                candy.special = newSpecial;
+                if (newSpecial === 'color-bomb') {
+                    candy.color = 'bomb';
+                }
+                candy.el.innerHTML = getCandyHTML(candy.color, candy.special, candy.armor || 0);
+                candy.el.classList.remove('candy-spawn');
+                void candy.el.offsetWidth;
+                candy.el.classList.add('candy-spawn');
+                this.sound.playSpecialCreate();
+            }
+
+            // ========================================================================
+            // CONTROLES TÁCTILES Y DE RATÓN (CLIC Y DESLIZAR / SWIPE)
+            // ========================================================================
+            attachCandyInput(candy) {
+                const onPointerDown = (e) => {
+                    if (this.isBusy || this.gameOver) return;
+                    this.sound.init();
+                    this.clearHints();
+
+                    const point = e.touches ? e.touches[0] : e;
+                    this.dragStartCandy = candy;
+                    this.dragStartX = point.clientX;
+                    this.dragStartY = point.clientY;
+                };
+
+                candy.el.addEventListener('mousedown', onPointerDown);
+                candy.el.addEventListener('touchstart', onPointerDown, { passive: true });
+            }
+
+            bindEvents() {
+                // Movimiento global para detectar swipe
+                const onPointerMove = (e) => {
+                    if (!this.dragStartCandy || this.isBusy || this.gameOver) return;
+
+                    const point = e.touches ? e.touches[0] : e;
+                    const dx = point.clientX - this.dragStartX;
+                    const dy = point.clientY - this.dragStartY;
+                    const threshold = 24; // píxeles mínimos para considerar deslizamiento
+
+                    if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+                        const origin = this.dragStartCandy;
+                        this.dragStartCandy = null; // Evitar múltiples disparos
+
+                        let targetRow = origin.row;
+                        let targetCol = origin.col;
+
+                        if (Math.abs(dx) > Math.abs(dy)) {
+                            targetCol += dx > 0 ? 1 : -1;
+                        } else {
+                            targetRow += dy > 0 ? 1 : -1;
+                        }
+
+                        if (this.isValidCoord(targetRow, targetCol)) {
+                            const target = this.board[targetRow][targetCol];
+                            this.deselectCandy();
+                            this.attemptSwap(origin, target);
+                        }
+                    }
+                };
+
+                // Soltar clic (selección por toque/clic)
+                const onPointerUp = () => {
+                    if (!this.dragStartCandy) return;
+                    const clickedCandy = this.dragStartCandy;
+                    this.dragStartCandy = null;
+
+                    if (this.isBusy || this.gameOver) return;
+                    this.handleCandyClick(clickedCandy);
+                };
+
+                window.addEventListener('mousemove', onPointerMove);
+                window.addEventListener('touchmove', onPointerMove, { passive: true });
+                window.addEventListener('mouseup', onPointerUp);
+                window.addEventListener('touchend', onPointerUp);
+
+                // Botones de la interfaz
+                document.getElementById('btn-restart').addEventListener('click', () => {
+                    this.sound.playSelect();
+                    this.startLevel(this.currentLevelIdx);
+                });
+
+                document.getElementById('btn-hint').addEventListener('click', () => {
+                    if (this.isBusy || this.gameOver) return;
+                    this.sound.playSelect();
+                    this.showHint();
+                });
+
+                document.getElementById('btn-sound').addEventListener('click', (e) => {
+                    const muted = this.sound.toggleMute();
+                    e.currentTarget.textContent = muted ? '🔇' : '🔊';
+                });
+
+                document.getElementById('btn-levels').addEventListener('click', () => {
+                    this.sound.playSelect();
+                    this.openLevelsModal();
+                });
+
+                document.getElementById('close-levels-modal').addEventListener('click', () => {
+                    document.getElementById('levels-modal').classList.add('hidden');
+                    document.getElementById('levels-modal').classList.remove('flex');
+                });
+
+                document.getElementById('modal-btn-retry').addEventListener('click', () => {
+                    this.sound.playSelect();
+                    this.startLevel(this.currentLevelIdx);
+                });
+
+                document.getElementById('modal-btn-next').addEventListener('click', () => {
+                    this.sound.playSelect();
+                    const nextIdx = (this.currentLevelIdx + 1) % LEVELS.length;
+                    this.startLevel(nextIdx);
+                });
+            }
+
+            handleCandyClick(candy) {
+                if (!this.selectedCandy) {
+                    this.selectCandy(candy);
+                    return;
+                }
+
+                if (this.selectedCandy === candy) {
+                    this.deselectCandy();
+                    return;
+                }
+
+                // Verificar si son adyacentes
+                const isAdjacent = Math.abs(this.selectedCandy.row - candy.row) + Math.abs(this.selectedCandy.col - candy.col) === 1;
+                if (isAdjacent) {
+                    const first = this.selectedCandy;
+                    this.deselectCandy();
+                    this.attemptSwap(first, candy);
+                } else {
+                    // Seleccionar el nuevo caramelo
+                    this.deselectCandy();
+                    this.selectCandy(candy);
+                }
+            }
+
+            selectCandy(candy) {
+                this.selectedCandy = candy;
+                candy.el.classList.add('candy-selected');
+                this.sound.playSelect();
+            }
+
+            deselectCandy() {
+                if (this.selectedCandy && this.selectedCandy.el) {
+                    this.selectedCandy.el.classList.remove('candy-selected');
+                }
+                this.selectedCandy = null;
+            }
+
+            isValidCoord(r, c) {
+                return r >= 0 && r < this.rows && c >= 0 && c < this.cols;
+            }
+
+            // ========================================================================
+            // LÓGICA DE INTERCAMBIO Y VALIDACIÓN DE JUGADA
+            // ========================================================================
+            async attemptSwap(candyA, candyB) {
+                if (!candyA || !candyB || this.isBusy) return;
+                this.isBusy = true;
+                this.clearHints();
+                clearTimeout(this.hintTimer);
+
+                // Registrar dirección del movimiento (horizontal o vertical)
+                this.lastSwapDir = candyA.row === candyB.row ? 'h' : 'v';
+
+                // Realizar intercambio visual y lógico
+                this.swapInBoard(candyA, candyB);
+                this.sound.playSwap();
+                await this.wait(270);
+
+                // Caso especial: Intercambio que involucra una Bomba de Color
+                if (candyA.special === 'color-bomb' || candyB.special === 'color-bomb') {
+                    this.movesLeft--;
+                    this.comboCount = 1;
+                    this.updateUI();
+                    await this.handleColorBombSwap(candyA, candyB);
+                    await this.processCascades();
+                    this.finishTurn();
+                    return;
+                }
+
+                // Caso especial: Dos caramelos especiales intercambiados entre sí
+                if (candyA.special !== 'normal' && candyB.special !== 'normal') {
+                    this.movesLeft--;
+                    this.comboCount = 1;
+                    this.updateUI();
+                    await this.handleSpecialComboSwap(candyA, candyB);
+                    await this.processCascades();
+                    this.finishTurn();
+                    return;
+                }
+
+                // Verificar si el intercambio formó líneas de 3 o más
+                const matches = this.findAllMatches();
+                if (matches.length === 0) {
+                    // Movimiento inválido: revertir animación
+                    this.sound.playInvalid();
+                    this.swapInBoard(candyA, candyB);
+                    await this.wait(270);
+                    this.isBusy = false;
+                    this.resetHintTimer();
+                    return;
+                }
+
+                // Movimiento válido
+                this.movesLeft--;
+                this.comboCount = 0;
+                this.updateUI();
+
+                await this.resolveMatches(matches, [candyA, candyB]);
+                await this.processCascades();
+                this.finishTurn();
+            }
+
+            swapInBoard(candyA, candyB) {
+                const rA = candyA.row, cA = candyA.col;
+                const rB = candyB.row, cB = candyB.col;
+
+                this.board[rA][cA] = candyB;
+                this.board[rB][cB] = candyA;
+
+                candyA.row = rB;
+                candyA.col = cB;
+                candyB.row = rA;
+                candyB.col = cA;
+
+                this.updateCandyPosition(candyA);
+                this.updateCandyPosition(candyB);
+            }
+
+            // ========================================================================
+            // DETECCIÓN DE COMBINACIONES (3, 4, 5, Y FORMAS L / T)
+            // ========================================================================
+            findAllMatches() {
+                const horizRuns = [];
+                const vertRuns = [];
+
+                // Buscar secuencias horizontales
+                for (let r = 0; r < this.rows; r++) {
+                    let c = 0;
+                    while (c < this.cols) {
+                        const candy = this.board[r][c];
+                        if (!candy || candy.color === 'bomb') {
+                            c++;
+                            continue;
+                        }
+                        const run = [candy];
+                        let nextC = c + 1;
+                        while (nextC < this.cols && this.board[r][nextC]?.color === candy.color) {
+                            run.push(this.board[r][nextC]);
+                            nextC++;
+                        }
+                        if (run.length >= 3) {
+                            horizRuns.push({ dir: 'h', candies: run, color: candy.color });
+                        }
+                        c = nextC;
+                    }
+                }
+
+                // Buscar secuencias verticales
+                for (let c = 0; c < this.cols; c++) {
+                    let r = 0;
+                    while (r < this.rows) {
+                        const candy = this.board[r][c];
+                        if (!candy || candy.color === 'bomb') {
+                            r++;
+                            continue;
+                        }
+                        const run = [candy];
+                        let nextR = r + 1;
+                        while (nextR < this.rows && this.board[nextR][c]?.color === candy.color) {
+                            run.push(this.board[nextR][c]);
+                            nextR++;
+                        }
+                        if (run.length >= 3) {
+                            vertRuns.push({ dir: 'v', candies: run, color: candy.color });
+                        }
+                        r = nextR;
+                    }
+                }
+
+                // Fusionar secuencias que se intersectan (formas L o T)
+                const groups = [];
+                const usedH = new Set();
+                const usedV = new Set();
+
+                horizRuns.forEach((hRun, hIdx) => {
+                    vertRuns.forEach((vRun, vIdx) => {
+                        if (hRun.color !== vRun.color) return;
+                        const intersection = hRun.candies.find(hc => vRun.candies.includes(hc));
+                        if (intersection) {
+                            usedH.add(hIdx);
+                            usedV.add(vIdx);
+                            const combined = Array.from(new Set([...hRun.candies, ...vRun.candies]));
+                            groups.push({
+                                type: 'LT', // Forma L o T -> crea Caramelo Envuelto
+                                candies: combined,
+                                pivot: intersection,
+                                color: hRun.color
+                            });
+                        }
+                    });
+                });
+
+                horizRuns.forEach((hRun, hIdx) => {
+                    if (!usedH.has(hIdx)) {
+                        groups.push({
+                            type: hRun.candies.length >= 5 ? '5' : (hRun.candies.length === 4 ? '4h' : '3'),
+                            candies: hRun.candies,
+                            pivot: null,
+                            color: hRun.color
+                        });
+                    }
+                });
+
+                vertRuns.forEach((vRun, vIdx) => {
+                    if (!usedV.has(vIdx)) {
+                        groups.push({
+                            type: vRun.candies.length >= 5 ? '5' : (vRun.candies.length === 4 ? '4v' : '3'),
+                            candies: vRun.candies,
+                            pivot: null,
+                            color: vRun.color
+                        });
+                    }
+                });
+
+                return groups;
+            }
+
+            // ========================================================================
+            // RESOLUCIÓN DE COMBINACIONES Y PODERES ESPECIALES
+            // ========================================================================
+            async resolveMatches(matchGroups, movedCandies = []) {
+                this.comboCount++;
+                this.sound.playMatch(this.comboCount);
+
+                if (this.comboCount >= 2) {
+                    this.showComboBanner(this.comboCount);
+                }
+
+                const toDestroy = new Set();
+                const specialsToCreate = [];
+
+                // Analizar cada grupo para determinar si crea un caramelo especial
+                for (const group of matchGroups) {
+                    // Elegir dónde aparecerá el caramelo especial (preferir el caramelo movido por el jugador)
+                    let spawnCandy = group.pivot ||
+                        group.candies.find(c => movedCandies.includes(c)) ||
+                        group.candies[Math.floor(group.candies.length / 2)];
+
+                    if (group.type === '5') {
+                        specialsToCreate.push({ candy: spawnCandy, special: 'color-bomb' });
+                    } else if (group.type === 'LT') {
+                        specialsToCreate.push({ candy: spawnCandy, special: 'wrapped' });
+                    } else if (group.type === '4h' || group.type === '4v') {
+                        // La dirección de las rayas sigue la dirección del intercambio o perpendicular
+                        const stripeType = this.lastSwapDir === 'h' ? 'striped-v' : 'striped-h';
+                        specialsToCreate.push({ candy: spawnCandy, special: stripeType });
+                    }
+
+                    group.candies.forEach(c => toDestroy.add(c));
+                }
+
+                // Excluir los caramelos que se transformarán en especiales de la destrucción
+                const protectedSet = new Set(specialsToCreate.map(s => s.candy));
+                protectedSet.forEach(c => toDestroy.delete(c));
+
+                // Expansión en cadena si algún caramelo a destruir ya era especial
+                this.expandSpecialEffects(toDestroy);
+
+                // Calcular puntos (escala ajustada para que cada nivel represente un reto real)
+                const basePoints = toDestroy.size * 45 + specialsToCreate.length * 120;
+                const earnedPoints = Math.round(basePoints * (1 + (this.comboCount - 1) * 0.45));
+                this.addScore(earnedPoints, Array.from(toDestroy)[0] || specialsToCreate[0]?.candy);
+
+                // Ejecutar animación de explosión, daño a corazas y partículas
+                await this.destroyCandies(Array.from(toDestroy));
+
+                // Transformar los caramelos protegidos en especiales
+                for (const item of specialsToCreate) {
+                    if (this.board[item.candy.row][item.candy.col] === item.candy) {
+                        this.upgradeCandySpecial(item.candy, item.special);
+                    }
+                }
+            }
+
+            /**
+             * Expande recursivamente los efectos de caramelos Rayados, Envueltos o Bombas
+             * cuando son alcanzados por una explosión.
+             */
+            expandSpecialEffects(destroySet) {
+                let addedNew = true;
+                const processedSpecials = new Set();
+
+                while (addedNew) {
+                    addedNew = false;
+                    const currentList = Array.from(destroySet);
+
+                    for (const candy of currentList) {
+                        if (candy.special === 'normal' || processedSpecials.has(candy)) continue;
+                        processedSpecials.add(candy);
+                        this.sound.playSpecialActivate();
+
+                        if (candy.special === 'striped-h') {
+                            this.spawnBeamFX(candy.row, candy.col, 'h');
+                            for (let c = 0; c < this.cols; c++) {
+                                const target = this.board[candy.row][c];
+                                if (target && !destroySet.has(target)) {
+                                    destroySet.add(target);
+                                    addedNew = true;
+                                }
+                            }
+                        } else if (candy.special === 'striped-v') {
+                            this.spawnBeamFX(candy.row, candy.col, 'v');
+                            for (let r = 0; r < this.rows; r++) {
+                                const target = this.board[r][candy.col];
+                                if (target && !destroySet.has(target)) {
+                                    destroySet.add(target);
+                                    addedNew = true;
+                                }
+                            }
+                        } else if (candy.special === 'wrapped') {
+                            // Explosión 3x3 (y simulamos doble onda expansiva visual)
+                            this.spawnExplosionRing(candy.row, candy.col);
+                            for (let dr = -1; dr <= 1; dr++) {
+                                for (let dc = -1; dc <= 1; dc++) {
+                                    const nr = candy.row + dr;
+                                    const nc = candy.col + dc;
+                                    if (this.isValidCoord(nr, nc)) {
+                                        const target = this.board[nr][nc];
+                                        if (target && !destroySet.has(target)) {
+                                            destroySet.add(target);
+                                            addedNew = true;
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (candy.special === 'color-bomb') {
+                            const randomColor = this.getRandomColor();
+                            for (let r = 0; r < this.rows; r++) {
+                                for (let c = 0; c < this.cols; c++) {
+                                    const target = this.board[r][c];
+                                    if (target && target.color === randomColor && !destroySet.has(target)) {
+                                        destroySet.add(target);
+                                        addedNew = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            /**
+             * Manejo cuando el jugador intercambia una Bomba de Color con otro caramelo
+             */
+            async handleColorBombSwap(candyA, candyB) {
+                this.sound.playSpecialActivate();
+                const bomb = candyA.special === 'color-bomb' ? candyA : candyB;
+                const other = bomb === candyA ? candyB : candyA;
+
+                const destroySet = new Set([bomb]);
+
+                if (other.special === 'color-bomb') {
+                    // ¡Dos bombas de color juntas limpian TODO el tablero!
+                    this.showComboBanner(5);
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols; c++) {
+                            if (this.board[r][c]) destroySet.add(this.board[r][c]);
+                        }
+                    }
+                } else {
+                    const targetColor = other.color;
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols; c++) {
+                            const item = this.board[r][c];
+                            if (item && item.color === targetColor) {
+                                // Si se combinó bomba + rayado/envuelto, convierte todos los de ese color en especiales
+                                if (other.special !== 'normal') {
+                                    this.upgradeCandySpecial(item, other.special);
+                                }
+                                destroySet.add(item);
+                            }
+                        }
+                    }
+                    this.expandSpecialEffects(destroySet);
+                }
+
+                this.addScore(destroySet.size * 90, bomb);
+                await this.destroyCandies(Array.from(destroySet));
+            }
+
+            /**
+             * Manejo cuando el jugador intercambia dos caramelos especiales (ej. Rayado + Rayado = Cruz gigante)
+             */
+            async handleSpecialComboSwap(candyA, candyB) {
+                this.sound.playSpecialActivate();
+                const destroySet = new Set([candyA, candyB]);
+
+                // Cruz gigante de fila y columna
+                this.spawnBeamFX(candyB.row, candyB.col, 'h');
+                this.spawnBeamFX(candyB.row, candyB.col, 'v');
+
+                for (let c = 0; c < this.cols; c++) {
+                    if (this.board[candyB.row][c]) destroySet.add(this.board[candyB.row][c]);
+                }
+                for (let r = 0; r < this.rows; r++) {
+                    if (this.board[r][candyB.col]) destroySet.add(this.board[r][candyB.col]);
+                }
+
+                // Si alguno es envuelto, expandir a 3 filas y 3 columnas
+                if (candyA.special === 'wrapped' || candyB.special === 'wrapped') {
+                    for (let offset = -1; offset <= 1; offset++) {
+                        const r = candyB.row + offset;
+                        const c = candyB.col + offset;
+                        if (r >= 0 && r < this.rows) {
+                            for (let col = 0; col < this.cols; col++) {
+                                if (this.board[r][col]) destroySet.add(this.board[r][col]);
+                            }
+                        }
+                        if (c >= 0 && c < this.cols) {
+                            for (let row = 0; row < this.rows; row++) {
+                                if (this.board[row][c]) destroySet.add(this.board[row][c]);
+                            }
+                        }
+                    }
+                }
+
+                this.expandSpecialEffects(destroySet);
+                this.addScore(destroySet.size * 100, candyB);
+                await this.destroyCandies(Array.from(destroySet));
+            }
+
+            async destroyCandies(candies) {
+                if (candies.length === 0) return;
+
+                // En Niveles Jefe, hacer combinaciones adyacentes también daña las corazas cercanas
+                const adjacentDamaged = new Set();
+                if (this.isBossLevel) {
+                    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+                    candies.forEach(candy => {
+                        dirs.forEach(([dr, dc]) => {
+                            const nr = candy.row + dr;
+                            const nc = candy.col + dc;
+                            if (this.isValidCoord(nr, nc)) {
+                                const neighbor = this.board[nr][nc];
+                                if (neighbor && neighbor.armor > 0 && !candies.includes(neighbor)) {
+                                    adjacentDamaged.add(neighbor);
+                                }
+                            }
+                        });
+                    });
+                }
+
+                // Aplicar daño a las corazas adyacentes
+                adjacentDamaged.forEach(neighbor => {
+                    neighbor.armor = Math.max(0, neighbor.armor - 1);
+                    this.spawnParticles(neighbor.row, neighbor.col, 'bomb');
+                    this.refreshCandyVisual(neighbor);
+                    this.addScore(80, neighbor);
+                });
+
+                const actuallyDestroyed = [];
+
+                candies.forEach(candy => {
+                    // Si el caramelo tiene coraza de 2 capas, primero pierde 1 capa y sobrevive
+                    if (candy.armor > 1) {
+                        candy.armor -= 1;
+                        this.spawnParticles(candy.row, candy.col, 'bomb');
+                        this.refreshCandyVisual(candy);
+                        return;
+                    }
+
+                    if (candy.armor === 1) {
+                        candy.armor = 0;
+                        this.addScore(100, candy);
+                    }
+
+                    actuallyDestroyed.push(candy);
+                    if (this.board[candy.row][candy.col] === candy) {
+                        this.board[candy.row][candy.col] = null;
+                    }
+                    this.spawnParticles(candy.row, candy.col, candy.color);
+                    candy.el.classList.add('candy-pop');
+                });
+
+                this.updateUI();
+                await this.wait(260);
+
+                actuallyDestroyed.forEach(candy => {
+                    if (candy.el && candy.el.parentNode) {
+                        candy.el.parentNode.removeChild(candy.el);
+                    }
+                });
+            }
+
+            // ========================================================================
+            // GRAVEDAD, RELLENO Y CASCADAS EN CADENA
+            // ========================================================================
+            async processCascades() {
+                while (true) {
+                    await this.applyGravityAndRefill();
+                    const newMatches = this.findAllMatches();
+                    if (newMatches.length === 0) break;
+                    await this.resolveMatches(newMatches);
+                }
+
+                // Asegurar que haya movimientos disponibles; si no, mezclar tablero
+                if (!this.findValidMove() && this.movesLeft > 0) {
+                    await this.shuffleBoard();
+                }
+            }
+
+            async applyGravityAndRefill() {
+                let anyMoved = false;
+
+                for (let c = 0; c < this.cols; c++) {
+                    let writeRow = this.rows - 1;
+
+                    // Hacer caer caramelos existentes
+                    for (let r = this.rows - 1; r >= 0; r--) {
+                        const candy = this.board[r][c];
+                        if (candy !== null) {
+                            if (r !== writeRow) {
+                                this.board[writeRow][c] = candy;
+                                this.board[r][c] = null;
+                                candy.row = writeRow;
+                                this.updateCandyPosition(candy);
+                                anyMoved = true;
+                            }
+                            writeRow--;
+                        }
+                    }
+
+                    // Generar nuevos caramelos desde arriba
+                    let spawnOffset = 1;
+                    for (let r = writeRow; r >= 0; r--) {
+                        const color = this.getRandomColor();
+                        const newCandy = this.createCandyObject(r, c, color, 'normal', false);
+                        // Posicionar encima del tablero antes de animar la caída
+                        newCandy.el.style.transition = 'none';
+                        newCandy.el.style.transform = `translate(${c * 100}%, ${-spawnOffset * 100}%)`;
+                        void newCandy.el.offsetWidth;
+                        newCandy.el.style.transition = '';
+                        newCandy.el.style.transform = `translate(${c * 100}%, ${r * 100}%)`;
+
+                        this.board[r][c] = newCandy;
+                        spawnOffset++;
+                        anyMoved = true;
+                    }
+                }
+
+                if (anyMoved) {
+                    await this.wait(290);
+                }
+            }
+
+            async shuffleBoard() {
+                this.showComboBanner(0, '¡Mezclando!');
+                await this.wait(400);
+                this.generateInitialBoard();
+            }
+
+            // ========================================================================
+            // DETECCIÓN DE JUGADAS POSIBLES Y PISTA AUTOMÁTICA
+            // ========================================================================
+            findValidMove() {
+                // Buscar bomba de color primero (siempre es jugable con cualquier adyacente)
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        if (this.board[r][c]?.special === 'color-bomb') {
+                            const adj = this.isValidCoord(r, c + 1) ? this.board[r][c + 1] : this.board[r][c - 1];
+                            if (adj) return [this.board[r][c], adj];
+                        }
+                    }
+                }
+
+                // Probar intercambios horizontales y verticales virtuales
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        const current = this.board[r][c];
+                        if (!current) continue;
+
+                        // Probar derecha
+                        if (c + 1 < this.cols) {
+                            const right = this.board[r][c + 1];
+                            if (right) {
+                                this.virtualSwap(r, c, r, c + 1);
+                                const hasMatch = this.findAllMatches().length > 0;
+                                this.virtualSwap(r, c, r, c + 1);
+                                if (hasMatch) return [current, right];
+                            }
+                        }
+
+                        // Probar abajo
+                        if (r + 1 < this.rows) {
+                            const down = this.board[r + 1][c];
+                            if (down) {
+                                this.virtualSwap(r, c, r + 1, c);
+                                const hasMatch = this.findAllMatches().length > 0;
+                                this.virtualSwap(r, c, r + 1, c);
+                                if (hasMatch) return [current, down];
+                            }
+                        }
+                    }
+                }
+                return null;
+            }
+
+            virtualSwap(r1, c1, r2, c2) {
+                const temp = this.board[r1][c1];
+                this.board[r1][c1] = this.board[r2][c2];
+                this.board[r2][c2] = temp;
+            }
+
+            resetHintTimer() {
+                clearTimeout(this.hintTimer);
+                this.clearHints();
+                if (this.gameOver) return;
+                this.hintTimer = setTimeout(() => {
+                    if (!this.isBusy && !this.gameOver) {
+                        this.showHint();
+                    }
+                }, 5500);
+            }
+
+            showHint() {
+                this.clearHints();
+                const pair = this.findValidMove();
+                if (pair) {
+                    pair.forEach(c => c.el.classList.add('candy-hint'));
+                }
+            }
+
+            clearHints() {
+                document.querySelectorAll('.candy-hint').forEach(el => el.classList.remove('candy-hint'));
+            }
+
+            // ========================================================================
+            // EFECTOS VISUALES (PARTÍCULAS, RAYOS, TEXTOS FLOTANTES)
+            // ========================================================================
+            spawnParticles(row, col, color) {
+                const palette = CANDY_ASSETS[color] || CANDY_ASSETS.red;
+                const centerX = (col + 0.5) * 12.5;
+                const centerY = (row + 0.5) * 12.5;
+
+                for (let i = 0; i < 7; i++) {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    const size = 6 + Math.random() * 8;
+                    const angle = (Math.PI * 2 * i) / 7 + Math.random() * 0.5;
+                    const dist = 25 + Math.random() * 45;
+
+                    p.style.width = `${size}px`;
+                    p.style.height = `${size}px`;
+                    p.style.left = `${centerX}%`;
+                    p.style.top = `${centerY}%`;
+                    p.style.backgroundColor = i % 2 === 0 ? palette.hex : '#ffffff';
+                    p.style.boxShadow = `0 0 8px ${palette.hex}`;
+                    p.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+                    p.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+
+                    this.fxLayerEl.appendChild(p);
+                    setTimeout(() => p.remove(), 660);
+                }
+            }
+
+            spawnBeamFX(row, col, dir) {
+                const beam = document.createElement('div');
+                beam.className = 'beam-fx';
+                if (dir === 'h') {
+                    beam.style.left = '2%';
+                    beam.style.width = '96%';
+                    beam.style.top = `${(row + 0.25) * 12.5}%`;
+                    beam.style.height = '6.25%';
+                } else {
+                    beam.style.top = '2%';
+                    beam.style.height = '96%';
+                    beam.style.left = `${(col + 0.25) * 12.5}%`;
+                    beam.style.width = '6.25%';
+                }
+                this.fxLayerEl.appendChild(beam);
+                setTimeout(() => beam.remove(), 430);
+            }
+
+            spawnExplosionRing(row, col) {
+                const ring = document.createElement('div');
+                ring.className = 'beam-fx';
+                ring.style.left = `${Math.max(0, (col - 1) * 12.5)}%`;
+                ring.style.top = `${Math.max(0, (row - 1) * 12.5)}%`;
+                ring.style.width = '37.5%';
+                ring.style.height = '37.5%';
+                ring.style.borderRadius = '24px';
+                this.fxLayerEl.appendChild(ring);
+                setTimeout(() => ring.remove(), 430);
+            }
+
+            addScore(points, referenceCandy) {
+                this.score += points;
+                this.updateUI();
+
+                if (referenceCandy) {
+                    const floatEl = document.createElement('div');
+                    floatEl.className = 'floating-score text-base sm:text-lg';
+                    floatEl.textContent = `+${points}`;
+                    floatEl.style.left = `${(referenceCandy.col + 0.5) * 12.5}%`;
+                    floatEl.style.top = `${(referenceCandy.row + 0.3) * 12.5}%`;
+                    this.fxLayerEl.appendChild(floatEl);
+                    setTimeout(() => floatEl.remove(), 910);
+                }
+            }
+
+            showComboBanner(combo, customText = null) {
+                const phrase = customText || COMBO_PHRASES[Math.min(combo - 2, COMBO_PHRASES.length - 1)];
+                this.comboBannerEl.textContent = phrase;
+                this.comboBannerEl.classList.remove('banner-animate');
+                void this.comboBannerEl.offsetWidth;
+                this.comboBannerEl.classList.add('banner-animate');
+            }
+
+            // ========================================================================
+            // ACTUALIZACIÓN DE INTERFAZ Y FIN DE TURNO / NIVEL
+            // ========================================================================
+            updateUI() {
+                const cfg = LEVELS[this.currentLevelIdx];
+                document.getElementById('level-subtitle').textContent = `Nivel ${cfg.id}/100 • ${cfg.name}`;
+                document.getElementById('ui-level').textContent = cfg.id;
+                document.getElementById('ui-moves').textContent = this.movesLeft;
+                document.getElementById('ui-score').textContent = this.score.toLocaleString('es-ES');
+                document.getElementById('ui-target').textContent = `${this.targetScore.toLocaleString('es-ES')} pts`;
+
+                const pct = Math.min(100, Math.round((this.score / this.targetScore) * 100));
+                document.getElementById('ui-progress').style.width = `${pct}%`;
+
+                if (this.isBossLevel) {
+                    const remaining = this.getRemainingArmors();
+                    document.getElementById('ui-armor-count').textContent =
+                        remaining > 0 ? `${remaining} coraza${remaining > 1 ? 's' : ''}` : '¡Despejado! ✅';
+                }
+
+                // Alerta visual si quedan pocos movimientos
+                const movesEl = document.getElementById('ui-moves');
+                if (this.movesLeft <= 5) {
+                    movesEl.classList.remove('text-yellow-300');
+                    movesEl.classList.add('text-rose-400', 'animate-pulse');
+                } else {
+                    movesEl.classList.add('text-yellow-300');
+                    movesEl.classList.remove('text-rose-400', 'animate-pulse');
+                }
+            }
+
+            finishTurn() {
+                this.isBusy = false;
+
+                const armorsLeft = this.isBossLevel ? this.getRemainingArmors() : 0;
+                const wonLevel = this.score >= this.targetScore && armorsLeft === 0;
+
+                // Verificar condición de victoria o derrota
+                if (wonLevel) {
+                    // Sumar bonificación por movimientos restantes y completar nivel de inmediato
+                    if (this.movesLeft > 0) {
+                        const bonus = this.movesLeft * 100;
+                        this.movesLeft = 0;
+                        this.addScore(bonus);
+                        this.updateUI();
+                    }
+                    this.triggerEndLevel(true);
+                } else if (this.movesLeft <= 0) {
+                    this.triggerEndLevel(false);
+                } else {
+                    this.resetHintTimer();
+                }
+            }
+
+            triggerEndLevel(won) {
+                this.gameOver = true;
+                clearTimeout(this.hintTimer);
+
+                const modal = document.getElementById('game-modal');
+                const iconEl = document.getElementById('modal-icon');
+                const titleEl = document.getElementById('modal-title');
+                const msgEl = document.getElementById('modal-message');
+                const scoreEl = document.getElementById('modal-score');
+                const starsEl = document.getElementById('modal-stars');
+                const nextBtn = document.getElementById('modal-btn-next');
+
+                scoreEl.textContent = this.score.toLocaleString('es-ES');
+
+                if (won) {
+                    this.sound.playWin();
+                    const nextLevelNumber = LEVELS[this.currentLevelIdx].id + 1;
+                    this.saveProgress(nextLevelNumber);
+
+                    iconEl.textContent = this.isBossLevel ? '👑' : '🏆';
+                    titleEl.textContent = this.isBossLevel ? '¡Jefe Derrotado!' : '¡Nivel Superado!';
+                    msgEl.textContent = `¡Fantástico! Completaste el Nivel ${LEVELS[this.currentLevelIdx].id}: "${LEVELS[this.currentLevelIdx].name}".`;
+
+                    const ratio = this.score / this.targetScore;
+                    starsEl.textContent = ratio >= 1.35 ? '⭐⭐⭐' : (ratio >= 1.15 ? '⭐⭐' : '⭐');
+
+                    nextBtn.classList.remove('hidden');
+                    nextBtn.textContent = this.currentLevelIdx < LEVELS.length - 1 ? 'Siguiente ➡️' : 'Jugar de nuevo 🎉';
+                } else {
+                    this.sound.playLose();
+                    const armorsLeft = this.isBossLevel ? this.getRemainingArmors() : 0;
+                    iconEl.textContent = '💔';
+                    titleEl.textContent = '¡Sin Movimientos!';
+                    if (armorsLeft > 0) {
+                        msgEl.textContent = `Te faltaron romper ${armorsLeft} coraza${armorsLeft > 1 ? 's' : ''} del Jefe${this.score < this.targetScore ? ` y ${(this.targetScore - this.score).toLocaleString('es-ES')} pts` : ''}.`;
+                    } else {
+                        msgEl.textContent = `Te faltaron ${(this.targetScore - this.score).toLocaleString('es-ES')} puntos para lograr el objetivo.`;
+                    }
+                    starsEl.textContent = '☆☆☆';
+                    nextBtn.classList.add('hidden');
+                }
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            hideModal() {
+                const modal = document.getElementById('game-modal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+            openLevelsModal() {
+                const grid = document.getElementById('levels-grid');
+                grid.innerHTML = '';
+
+                LEVELS.forEach((lvl, idx) => {
+                    const isUnlocked = lvl.id <= this.unlockedLevels;
+                    const isCurrent = idx === this.currentLevelIdx;
+
+                    const btn = document.createElement('button');
+                    btn.className = `w-full p-3 rounded-2xl border-2 flex items-center justify-between transition ${
+                        isCurrent
+                            ? 'bg-pink-500/40 border-yellow-300'
+                            : lvl.isBoss && isUnlocked
+                                ? 'bg-amber-500/25 border-amber-300/70 hover:bg-amber-500/35'
+                                : isUnlocked
+                                    ? 'bg-white/15 border-white/40 hover:bg-white/25'
+                                    : 'bg-purple-950/50 border-white/10 opacity-60 cursor-not-allowed'
+                    }`;
+
+                    btn.innerHTML = `
+                        <div class="flex items-center gap-3 text-left">
+                            <span class="w-9 h-9 rounded-xl ${lvl.isBoss ? 'bg-amber-400/30 text-amber-200' : 'bg-white/20'} flex items-center justify-center font-bold text-sm">
+                                ${isUnlocked ? (lvl.isBoss ? `👑${lvl.id}` : lvl.id) : '🔒'}
+                            </span>
+                            <div>
+                                <div class="font-bold text-sm sm:text-base text-white flex items-center gap-1.5">
+                                    <span>Nivel ${lvl.id}: ${lvl.name}</span>
+                                </div>
+                                <div class="text-xs text-pink-200">
+                                    Objetivo: ${lvl.target.toLocaleString('es-ES')} pts • ${lvl.moves} mov.${lvl.isBoss ? ` • ${lvl.armorCells} corazas` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-sm font-bold text-yellow-300 shrink-0 ml-2">
+                            ${isCurrent ? 'Actual' : (isUnlocked ? 'Jugar ▶' : '')}
+                        </span>
+                    `;
+
+                    if (isUnlocked) {
+                        btn.addEventListener('click', () => {
+                            this.sound.playSelect();
+                            document.getElementById('levels-modal').classList.add('hidden');
+                            document.getElementById('levels-modal').classList.remove('flex');
+                            this.startLevel(idx);
+                        });
+                    }
+
+                    grid.appendChild(btn);
+                });
+
+                const modal = document.getElementById('levels-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                // Desplazar automáticamente al nivel actual en la lista de 100 niveles
+                setTimeout(() => {
+                    const currentBtn = grid.children[this.currentLevelIdx];
+                    if (currentBtn) {
+                        currentBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    }
+                }, 50);
+            }
+
+            wait(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // Iniciar aplicación cuando el DOM y fuentes estén listos
+        window.addEventListener('load', () => {
+            window.sweetCrushApp = new SweetCrushGame();
+        });
+    </script>
+</body>
+</html>
