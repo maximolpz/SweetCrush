@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sweet Crush Saga - Juego Match-3</title>
+    <link rel="icon" type="image/png" href="dulce.png">
+    <link rel="apple-touch-icon" href="dulce.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -27,13 +29,14 @@
 
         body {
             margin: 0;
-            padding: 0;
+            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
             min-height: 100vh;
             min-height: 100dvh;
+            max-height: 100dvh;
             background: linear-gradient(135deg, #ff6b9d 0%, #c86dd7 50%, #5b86e5 100%);
             background-size: 200% 200%;
             animation: gradientFlow 15s ease infinite;
-            overflow-x: hidden;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -115,13 +118,15 @@
         /* Contenedor principal del tablero */
         #board-wrapper {
             position: relative;
-            width: min(92vw, 460px);
-            height: min(92vw, 460px);
+            width: min(92vw, 48dvh, 450px);
+            height: min(92vw, 48dvh, 450px);
+            aspect-ratio: 1 / 1;
+            flex-shrink: 0;
             background: var(--board-bg);
-            border: 5px solid rgba(255, 255, 255, 0.65);
-            border-radius: 22px;
+            border: clamp(3px, 1vw, 5px) solid rgba(255, 255, 255, 0.65);
+            border-radius: clamp(16px, 4vw, 22px);
             box-shadow: 0 18px 40px rgba(28, 8, 54, 0.55), inset 0 0 20px rgba(0, 0, 0, 0.45);
-            padding: 8px;
+            padding: clamp(5px, 1.5vw, 8px);
             touch-action: none;
         }
 
@@ -152,10 +157,10 @@
         /* Capa de caramelos animados posicionados absolutamente */
         #candy-layer {
             position: absolute;
-            top: 8px;
-            left: 8px;
-            right: 8px;
-            bottom: 8px;
+            top: clamp(5px, 1.5vw, 8px);
+            left: clamp(5px, 1.5vw, 8px);
+            right: clamp(5px, 1.5vw, 8px);
+            bottom: clamp(5px, 1.5vw, 8px);
             pointer-events: none;
         }
 
@@ -176,6 +181,10 @@
 
         .candy-piece:active {
             cursor: grabbing;
+        }
+
+        .candy-locked {
+            cursor: not-allowed !important;
         }
 
         .candy-visual {
@@ -379,88 +388,88 @@
         }
     </style>
 </head>
-<body class="p-2 sm:p-4">
+<body class="px-2.5 py-2 sm:p-4">
 
     <!-- Burbujas decorativas de fondo -->
     <div id="bg-bubbles-container"></div>
 
     <!-- Contenedor Principal del Juego -->
-    <main class="relative z-10 w-full max-w-lg flex flex-col items-center gap-3 sm:gap-4">
+    <main class="relative z-10 w-full max-w-md sm:max-w-lg h-full max-h-[100dvh] flex flex-col items-center justify-between sm:justify-center gap-2 sm:gap-3.5 py-1">
         
         <!-- Encabezado y Controles Superiores -->
-        <header class="w-full flex items-center justify-between px-1">
-            <div class="flex items-center gap-2">
-                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-600 border-2 border-white shadow-lg flex items-center justify-center text-xl">
+        <header class="w-full flex items-center justify-between gap-2 px-0.5 shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-600 border-2 border-white shadow-lg flex items-center justify-center text-lg sm:text-xl">
                     🍬
                 </div>
-                <div>
-                    <h1 class="text-xl sm:text-2xl font-bold tracking-wide drop-shadow-md leading-none">
+                <div class="min-w-0">
+                    <h1 class="text-lg sm:text-2xl font-bold tracking-wide drop-shadow-md leading-tight truncate">
                         Sweet Crush
                     </h1>
-                    <span id="level-subtitle" class="text-xs sm:text-sm text-pink-100 font-medium">
+                    <span id="level-subtitle" class="block text-[11px] sm:text-sm text-pink-100 font-medium truncate">
                         Nivel 1 • Reino de Caramelo
                     </span>
                 </div>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <!-- Selector rápido de nivel -->
-                <button id="btn-levels" title="Seleccionar Nivel" class="candy-btn candy-btn-blue px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1">
+                <button id="btn-levels" title="Seleccionar Nivel" class="candy-btn candy-btn-blue px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1">
                     <span>🗺️</span>
                     <span class="hidden sm:inline">Niveles</span>
                 </button>
                 <!-- Botón Pista -->
-                <button id="btn-hint" title="Mostrar Pista" class="candy-btn candy-btn-green px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1">
+                <button id="btn-hint" title="Mostrar Pista" class="candy-btn candy-btn-green px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1">
                     <span>💡</span>
                 </button>
                 <!-- Botón Reiniciar -->
-                <button id="btn-restart" title="Reiniciar Nivel" class="candy-btn px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1">
+                <button id="btn-restart" title="Reiniciar Nivel" class="candy-btn px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1">
                     <span>🔄</span>
                 </button>
                 <!-- Botón Audio -->
-                <button id="btn-sound" title="Activar/Silenciar Sonido" class="candy-btn candy-btn-blue w-10 h-10 rounded-xl text-base font-bold flex items-center justify-center">
+                <button id="btn-sound" title="Activar/Silenciar Sonido" class="candy-btn candy-btn-blue w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-sm sm:text-base font-bold flex items-center justify-center">
                     🔊
                 </button>
             </div>
         </header>
 
         <!-- Panel de Estadísticas: Nivel, Puntaje, Objetivo, Movimientos -->
-        <section class="candy-panel w-full p-3 sm:p-4 flex flex-col gap-2.5">
-            <div class="grid grid-cols-3 gap-2 text-center">
+        <section class="candy-panel w-full p-2.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2.5 shrink-0">
+            <div class="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
                 <!-- Nivel -->
-                <div class="bg-purple-950/40 rounded-2xl py-1.5 px-2 border border-white/20">
-                    <div class="text-[11px] sm:text-xs uppercase tracking-wider text-pink-200 font-semibold">Nivel</div>
-                    <div id="ui-level" class="text-xl sm:text-2xl font-bold text-white drop-shadow">1</div>
+                <div class="bg-purple-950/40 rounded-xl sm:rounded-2xl py-1 sm:py-1.5 px-1.5 sm:px-2 border border-white/20">
+                    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-pink-200 font-semibold">Nivel</div>
+                    <div id="ui-level" class="text-base sm:text-2xl font-bold text-white drop-shadow leading-tight">1</div>
                 </div>
 
                 <!-- Movimientos -->
-                <div class="bg-purple-950/40 rounded-2xl py-1.5 px-2 border border-white/20">
-                    <div class="text-[11px] sm:text-xs uppercase tracking-wider text-pink-200 font-semibold">Movimientos</div>
-                    <div id="ui-moves" class="text-xl sm:text-2xl font-bold text-yellow-300 drop-shadow">20</div>
+                <div class="bg-purple-950/40 rounded-xl sm:rounded-2xl py-1 sm:py-1.5 px-1.5 sm:px-2 border border-white/20">
+                    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-pink-200 font-semibold">Movimientos</div>
+                    <div id="ui-moves" class="text-base sm:text-2xl font-bold text-yellow-300 drop-shadow leading-tight">20</div>
                 </div>
 
                 <!-- Puntaje -->
-                <div class="bg-purple-950/40 rounded-2xl py-1.5 px-2 border border-white/20">
-                    <div class="text-[11px] sm:text-xs uppercase tracking-wider text-pink-200 font-semibold">Puntaje</div>
-                    <div id="ui-score" class="text-xl sm:text-2xl font-bold text-emerald-300 drop-shadow">0</div>
+                <div class="bg-purple-950/40 rounded-xl sm:rounded-2xl py-1 sm:py-1.5 px-1.5 sm:px-2 border border-white/20">
+                    <div class="text-[10px] sm:text-xs uppercase tracking-wider text-pink-200 font-semibold">Puntaje</div>
+                    <div id="ui-score" class="text-base sm:text-2xl font-bold text-emerald-300 drop-shadow leading-tight">0</div>
                 </div>
             </div>
 
             <!-- Barra de progreso hacia el Objetivo -->
             <div class="flex flex-col gap-1">
-                <div class="flex justify-between items-center text-xs sm:text-sm font-semibold px-1">
+                <div class="flex justify-between items-center text-[11px] sm:text-sm font-semibold px-1">
                     <span id="ui-objective-label" class="text-pink-100">Objetivo del Nivel:</span>
                     <span id="ui-target" class="text-yellow-200 font-bold">2,200 pts</span>
                 </div>
-                <div class="w-full h-4 bg-purple-950/60 rounded-full p-0.5 border border-white/30 overflow-hidden relative">
+                <div class="w-full h-3 sm:h-4 bg-purple-950/60 rounded-full p-0.5 border border-white/30 overflow-hidden relative">
                     <div id="ui-progress" class="progress-bar-fill h-full rounded-full" style="width: 0%;"></div>
                     <!-- Estrellas hitos -->
-                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] drop-shadow">⭐</span>
+                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] sm:text-[10px] drop-shadow">⭐</span>
                 </div>
                 <!-- Indicador extra exclusivo para Niveles Jefe (cada 10 niveles) -->
-                <div id="boss-status-bar" class="hidden mt-1 bg-amber-500/25 border border-amber-300/60 rounded-xl px-2.5 py-1 flex items-center justify-between text-xs font-bold text-amber-200">
-                    <span>👑 JEFE: Rompe todas las corazas</span>
-                    <span id="ui-armor-count" class="bg-amber-400 text-purple-950 px-2 py-0.5 rounded-lg">0 restantes</span>
+                <div id="boss-status-bar" class="hidden mt-0.5 bg-amber-500/25 border border-amber-300/60 rounded-xl px-2 py-0.5 sm:py-1 flex items-center justify-between text-[11px] sm:text-xs font-bold text-amber-200">
+                    <span>👑 JEFE: Rompe corazas</span>
+                    <span id="ui-armor-count" class="bg-amber-400 text-purple-950 px-1.5 py-0.5 rounded-lg">0 restantes</span>
                 </div>
             </div>
         </section>
@@ -478,8 +487,8 @@
         </section>
 
         <!-- Pie de ayuda breve -->
-        <footer class="text-center text-xs sm:text-sm text-white/90 font-medium drop-shadow px-2">
-            Desliza o toca dos caramelos adyacentes para combinar 3 o más • <span class="text-yellow-200 font-bold">4 = Rayado</span> • <span class="text-pink-200 font-bold">L/T = Envuelto</span> • <span class="text-cyan-200 font-bold">5 = Bomba</span>
+        <footer class="text-center text-[11px] sm:text-sm text-white/95 font-medium drop-shadow px-2 leading-tight shrink-0">
+            ✨ Junta <span class="text-yellow-200 font-bold">4 en línea</span> = Rayado • <span class="text-pink-200 font-bold">5 en esquina</span> = Envuelto • <span class="text-cyan-200 font-bold">5 en línea</span> = Bomba
         </footer>
     </main>
 
@@ -1113,6 +1122,11 @@
             refreshCandyVisual(candy) {
                 if (!candy || !candy.el) return;
                 candy.el.innerHTML = getCandyHTML(candy.color, candy.special, candy.armor || 0);
+                if (candy.armor > 0) {
+                    candy.el.classList.add('candy-locked');
+                } else {
+                    candy.el.classList.remove('candy-locked');
+                }
             }
 
             getRandomColor() {
@@ -1204,6 +1218,12 @@
                     if (this.isBusy || this.gameOver) return;
                     this.sound.init();
                     this.clearHints();
+
+                    // Los caramelos congelados/con coraza están fijos y no pueden moverse
+                    if (candy.armor > 0) {
+                        this.sound.playInvalid();
+                        return;
+                    }
 
                     const point = e.touches ? e.touches[0] : e;
                     this.dragStartCandy = candy;
@@ -1301,6 +1321,12 @@
             }
 
             handleCandyClick(candy) {
+                // No permitir seleccionar ni mover caramelos congelados/con coraza
+                if (candy.armor > 0) {
+                    this.sound.playInvalid();
+                    return;
+                }
+
                 if (!this.selectedCandy) {
                     this.selectCandy(candy);
                     return;
@@ -1346,6 +1372,13 @@
             // ========================================================================
             async attemptSwap(candyA, candyB) {
                 if (!candyA || !candyB || this.isBusy) return;
+
+                // Los caramelos congelados (con coraza) están fijos en su casilla
+                if (candyA.armor > 0 || candyB.armor > 0) {
+                    this.sound.playInvalid();
+                    return;
+                }
+
                 this.isBusy = true;
                 this.clearHints();
                 clearTimeout(this.hintTimer);
@@ -1807,24 +1840,33 @@
                 for (let c = 0; c < this.cols; c++) {
                     let writeRow = this.rows - 1;
 
-                    // Hacer caer caramelos existentes
+                    // Hacer caer caramelos existentes respetando los caramelos congelados fijos
                     for (let r = this.rows - 1; r >= 0; r--) {
                         const candy = this.board[r][c];
                         if (candy !== null) {
-                            if (r !== writeRow) {
-                                this.board[writeRow][c] = candy;
-                                this.board[r][c] = null;
-                                candy.row = writeRow;
-                                this.updateCandyPosition(candy);
-                                anyMoved = true;
+                            if (candy.armor > 0) {
+                                // El caramelo congelado permanece fijo en su lugar
+                                writeRow = r - 1;
+                            } else {
+                                while (writeRow > r && this.board[writeRow][c]?.armor > 0) {
+                                    writeRow--;
+                                }
+                                if (r !== writeRow) {
+                                    this.board[writeRow][c] = candy;
+                                    this.board[r][c] = null;
+                                    candy.row = writeRow;
+                                    this.updateCandyPosition(candy);
+                                    anyMoved = true;
+                                }
+                                writeRow--;
                             }
-                            writeRow--;
                         }
                     }
 
-                    // Generar nuevos caramelos desde arriba
+                    // Generar nuevos caramelos desde arriba saltando casillas congeladas fijas
                     let spawnOffset = 1;
                     for (let r = writeRow; r >= 0; r--) {
+                        if (this.board[r][c]?.armor > 0) continue;
                         const color = this.getRandomColor();
                         const newCandy = this.createCandyObject(r, c, color, 'normal', false);
                         // Posicionar encima del tablero antes de animar la caída
@@ -1855,26 +1897,29 @@
             // DETECCIÓN DE JUGADAS POSIBLES Y PISTA AUTOMÁTICA
             // ========================================================================
             findValidMove() {
-                // Buscar bomba de color primero (siempre es jugable con cualquier adyacente)
+                // Buscar bomba de color primero (siempre es jugable con cualquier adyacente libre)
                 for (let r = 0; r < this.rows; r++) {
                     for (let c = 0; c < this.cols; c++) {
-                        if (this.board[r][c]?.special === 'color-bomb') {
-                            const adj = this.isValidCoord(r, c + 1) ? this.board[r][c + 1] : this.board[r][c - 1];
-                            if (adj) return [this.board[r][c], adj];
+                        const cell = this.board[r][c];
+                        if (cell?.special === 'color-bomb' && !(cell.armor > 0)) {
+                            const right = this.isValidCoord(r, c + 1) ? this.board[r][c + 1] : null;
+                            const left = this.isValidCoord(r, c - 1) ? this.board[r][c - 1] : null;
+                            const adj = (right && !(right.armor > 0)) ? right : ((left && !(left.armor > 0)) ? left : null);
+                            if (adj) return [cell, adj];
                         }
                     }
                 }
 
-                // Probar intercambios horizontales y verticales virtuales
+                // Probar intercambios horizontales y verticales virtuales (solo entre caramelos libres)
                 for (let r = 0; r < this.rows; r++) {
                     for (let c = 0; c < this.cols; c++) {
                         const current = this.board[r][c];
-                        if (!current) continue;
+                        if (!current || current.armor > 0) continue;
 
                         // Probar derecha
                         if (c + 1 < this.cols) {
                             const right = this.board[r][c + 1];
-                            if (right) {
+                            if (right && !(right.armor > 0)) {
                                 this.virtualSwap(r, c, r, c + 1);
                                 const hasMatch = this.findAllMatches().length > 0;
                                 this.virtualSwap(r, c, r, c + 1);
@@ -1885,7 +1930,7 @@
                         // Probar abajo
                         if (r + 1 < this.rows) {
                             const down = this.board[r + 1][c];
-                            if (down) {
+                            if (down && !(down.armor > 0)) {
                                 this.virtualSwap(r, c, r + 1, c);
                                 const hasMatch = this.findAllMatches().length > 0;
                                 this.virtualSwap(r, c, r + 1, c);
